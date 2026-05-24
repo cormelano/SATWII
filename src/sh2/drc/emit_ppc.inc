@@ -1,11 +1,4 @@
 /*
- *
- *
- *
- *
- */
-
-/*
  * emit 32-bit PPC from SH2 instructions
  *
  * SH2 has 142 instructions
@@ -77,7 +70,7 @@
 #define PPCC_ADDZE(rD, rA)					EMIT(0x7C000194 | ((rD) << 21) | ((rA) << 16))
 #define PPCC_SUBF(rD, rA, rB)				EMIT(0x7C000050 | ((rD) << 21) | ((rA) << 16) | ((rB) << 11))
 #define PPCC_SUBFCO(rD, rA, rB)				EMIT(0x7C000410 | ((rD) << 21) | ((rA) << 16) | ((rB) << 11))
-#define PPCC_SUBFO(rD, rA, rB)				EMIT(0x7C000450 | ((rD) << 21) | ((rA) << 16) | ((rB) << 11))
+#define PPCC_SUBFOp(rD, rA, rB)				EMIT(0x7C000451 | ((rD) << 21) | ((rA) << 16) | ((rB) << 11))
 #define PPCC_SUBFEO(rD, rA, rB)				EMIT(0x7C000510 | ((rD) << 21) | ((rA) << 16) | ((rB) << 11))
 #define PPCC_SUBFZE(rD, rA)					EMIT(0x7C000190 | ((rD) << 21) | ((rA) << 16))
 #define PPCC_MULLW(rD, rA, rB)				EMIT(0x7C0001D6 | ((rD) << 21) | ((rA) << 16) | ((rB) << 11))
@@ -108,10 +101,13 @@
 #define PPCC_CMPL(cD, rA, rB)				EMIT(0x7C000040 | ((cD) << 23) | ((rA) << 16) | ((rB) << 11))
 #define PPCC_CMPI(cD, rA, imm)				EMIT(0x2C000000 | ((cD) << 23) | ((rA) << 16) | ((imm) & 0xFFFF))
 #define PPCC_CRNOR(cD, cA, cB)				EMIT(0x4C000042 | ((cD) << 21) | ((cA) << 16) | ((cB) << 11))
+#define PPCC_CROR(cD, cA, cB)				EMIT(0x4C000382 | ((cD) << 21) | ((cA) << 16) | ((cB) << 11))
 
 //Branch inst
 #define PPCC_B(addr)						EMIT(0x48000000 | ((((u32) addr - (u32)icache_ptr) & 0x3FFFFFC)))
 #define PPCC_BL(addr)						EMIT(0x48000001 | ((((u32) addr - (u32)icache_ptr) & 0x3FFFFFC)))
+#define PPCC_BCT(cB, disp)					EMIT(0x40000000 | ((0b01100) << 21) | ((cB) << 16) | (((disp) << 2) & 0xFFFC))
+#define PPCC_BCF(cB, disp)					EMIT(0x40000000 | ((0b00100) << 21) | ((cB) << 16) | (((disp) << 2) & 0xFFFC))
 #define PPCC_BLR							EMIT(0x4E800020)
 
 
@@ -127,6 +123,7 @@
 #define PPCC_STWU(rS, rA, d)				EMIT(0x94000000 | ((rS) << 21) | ((rA) << 16) | ((d) & 0xFFFF))
 #define PPCC_STW(rS, rA, d)					EMIT(0x90000000 | ((rS) << 21) | ((rA) << 16) | ((d) & 0xFFFF))
 #define PPCC_STMW(rS, rA, d)				EMIT(0xBC000000 | ((rS) << 21) | ((rA) << 16) | ((d) & 0xFFFF))
+#define PPCC_LHA(rD, rA, d)					EMIT(0xA8000000 | ((rD) << 21) | ((rA) << 16) | ((d) & 0xFFFF))
 #define PPCC_LWZ(rD, rA, d)					EMIT(0x80000000 | ((rD) << 21) | ((rA) << 16) | ((d) & 0xFFFF))
 #define PPCC_LMW(rD, rA, d)					EMIT(0xB8000000 | ((rD) << 21) | ((rA) << 16) | ((d) & 0xFFFF))
 
@@ -134,51 +131,3 @@
 //Helper inst
 #define PPCC_MOV(rD, rA)					PPCC_ORI(rD, rA, 0x0)
 #define PPCC_CLEAR(rD)						PPCC_ANDI(rD, rD, 0x0)
-
-//Saves register in address
-#define PPCC_SAVEW(addr, rA)				\
-	PPCC_ADDIS(GP_TMP, 0, addr >> 16);		\
-	PPCC_STW(rA, GP_TMP, addr & 0xFFFF)
-
-//Loads address to register
-#define PPCC_LOADW(rD, addr)				\
-	PPCC_ADDIS(rA, 0, addr >> 16);			\
-	PPCC_LWZ(rA, rA, addr & 0xFFFF)
-
-
-//Code block defines (we store all 18 non-volatile)
-//TODO: MAKE Stores better only used registers
-#define PPCC_BEGIN_BLOCK(reg_num)	\
-	PPCC_STWU(1, 1, -92) \
-	PPCC_MFLR(0) \
-	PPCC_STW(0, 1, 92+4) \
-	PPCC_STMW(31-reg_num, 1, 92 - ((reg_num+1)*4))
-
-#define PPCC_END_BLOCK(reg_num)	\
-	PPCC_LWZ(0, 1, 92+4) \
-	PPCC_MTLR(0) \
-	PPCC_LMW(31-reg_num, 1, 92 - ((reg_num+1)*4)) \
-	PPCC_ADDI(1, 1, 92) \
-	PPCC_BLR
-#if 0
-stwu sp,-0x0058 (sp)
-mflr r0
-stw r0, 0x005C (sp)
-stmw r14, 0x0010 (sp)
-
-lwz r0, 0x005C (sp)
-mtlr r0
-lmw r14, 0x0010 (sp)
-addi sp, sp 0x0058
-
-
-stwu sp,-0x0040 (sp)
-mflr r0
-stw r0, 0x0044 (sp)
-many stw...
-
-lwz r0, 0x0044 (sp)
-mtlr r0
-many lwz ...
-addi sp, sp, 0x0040
-#endif

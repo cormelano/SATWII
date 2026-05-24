@@ -1597,7 +1597,6 @@ static void FASTCALL SH2rotcr(SH2_struct * sh)
 	u32 n = INSTRUCTION_B(sh->instruction);
 	temp = sh->regs.R[n] & 1;
 
-	sh->regs.R[n]>>=1;
 	sh->regs.R[n] = (sh->regs.R[n] >> 1) | (sh->regs.SR.part.T << 31);
 	sh->regs.SR.part.T = temp;
 	sh->regs.PC+=2;
@@ -2370,10 +2369,10 @@ FASTCALL void SH2InterpreterExec(SH2_struct *context, u32 cycles)
 {
 	SH2HandleInterrupts(context);
 
-	if (context->isIdle)
-		SH2idleParse(context, cycles);
-	else
-		SH2idleCheck(context, cycles);
+	//if (context->isIdle)
+	//	SH2idleParse(context, cycles);
+	//else
+//		SH2idleCheck(context, cycles);
 
    while(context->cycles < cycles)
    {

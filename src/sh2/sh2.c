@@ -6,8 +6,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef SH2_TEST
 #include "../cart.h"
 #include "../memory.h"
+#else
+
+#define mem_CyclesW(addr) 1
+#define mem_CyclesR(addr) 1
+
+extern u8 mem_Read8(u32 addr);
+extern u16 mem_Read16(u32 addr);
+extern u32 mem_Read32(u32 addr);
+extern u8 mem_Write8(u32 addr, u32 val);
+extern u16 mem_Write16(u32 addr, u32 val);
+extern u32 mem_Write32(u32 addr, u32 val);
+#endif
 
 #define __rlwimi(d, v, shift, ms, me) __asm__("rlwimi %0, %1, %2, %3, %4" : "+r"(d) : "r"(v), "I"(shift), "I"(31-me), "I"(31-ms))
 
@@ -24,6 +37,9 @@ SH2 *sh_ctx;
 #define write8(ptr, x)		(*((u8*)(ptr)) = (x))
 #define write16(ptr, x)		(*((u16*)(ptr)) = (x))
 #define write32(ptr, x)		(*((u32*)(ptr)) = (x))
+
+
+extern void sh2_IntExec(SH2 *sh, s32 cycles);
 
 static void sh2_FRTExec(SH2 *sh, u32 cycles);
 static void sh2_WDTExec(SH2 *sh, u32 cycles);
@@ -50,18 +66,19 @@ void sh2_Deinit(void)
 
 void sh2_PowerOn(SH2 *sh)
 {
-	sh->pc = sh2_Read32(0x0);	//Get from vector address table
-	sh->r[15] = sh2_Read32(0x4); //Get from vector address table
+	sh->pc = mem_Read32(0x0);	//Get from vector address table
+	sh->r[15] = mem_Read32(0x4); //Get from vector address table
 	sh->vbr = 0x0;
 	sh->sr |= 0xF0;
 	sh->cycles = 0;
+	//__OpenSH2Writer();
 }
 
 
 void sh2_Reset(SH2 *sh)
 {
-	sh->pc = sh2_Read32(0x8);	//Get from vector address table
-	sh->r[15] = sh2_Read32(0xC); //Get from vector address table
+	sh->pc = mem_Read32(0x8);	//Get from vector address table
+	sh->r[15] = mem_Read32(0xC); //Get from vector address table
 	sh->vbr = 0x0;
 	sh->gbr = 0x0;
 	sh->mach = 0x0;
@@ -75,9 +92,8 @@ void sh2_Reset(SH2 *sh)
 	sh->frc_leftover = 0;
 	sh->wdt_leftover = 0;
 	sh->wdt_shift = 1;
+	sh->wdt_stat = 0x60;
 
-
-	//TODO: REset interrupts
 	memset(sh->iqr, 0, sizeof(sh->iqr));
 	sh->iqr_count = 0;
 
@@ -138,7 +154,7 @@ void sh2_OnchipReset(SH2 *sh)
 	OCR_CHCR0 = 0x00000000;
 	OCR_CHCR1 = 0x00000000;
 	OCR_DMAOR = 0x00000000;
-	OCR_BCR1 = 0x03F0 | (msh2.flags & SH2_FLAG_SLAVE);
+	OCR_BCR1 = 0x03F0 | (sh->flags & SH2_FLAG_SLAVE);
 	OCR_BCR2 = 0x00FC;
 	OCR_WCR = 0xAAFF;
 	OCR_MCR = 0x0000;
@@ -151,7 +167,6 @@ void sh2_Exec(SH2 *sh, u32 cycles)
 {
 	//Update context
 	sh_ctx = sh;
-	sh2_HandleInterrupt(sh);
 	//if (!(sh->flags & SH2_FLAG_SLEEPING)) {
 	sh2_DrcExec(sh, cycles);
 	cycles += sh->cycles;
@@ -246,7 +261,7 @@ static void sh2_FRTExec(SH2 *sh, u32 cycles)
 static void sh2_WDTExec(SH2 *sh, u32 cycles)
 {
 	//XXX: Optimize conditional
-	if ((~(OCR_WTCSR) & 0x20) || (OCR_WTCSR & 0x80) || (OCR_RSTCSR & 0x80)) {
+	if ((sh->wdt_stat & 0x20) || (OCR_WTCSR & 0x80) || (OCR_RSTCSR & 0x80)) {
 		return;
 	}
 	const u32 mask = (1 << sh->wdt_shift) - 1;
@@ -254,7 +269,7 @@ static void sh2_WDTExec(SH2 *sh, u32 cycles)
 	sh->wdt_leftover = (cycles + sh->wdt_leftover) & mask;
 
 	if (wdt > 0xFF) {
-		if (~(OCR_WTCSR) & 0x40) { // if in Interval Timer Mode set overflow flag and send interrupt
+		if (sh->wdt_stat & 0x40) { // if in Interval Timer Mode set overflow flag and send interrupt
 			OCR_WTCSR |= 0x80;
 			sh2_SetInterrupt(sh, (OCR_VCRWDT >> 8) & 0x7F, (OCR_IPRA >> 4) & 0xF);
 		} else {
@@ -264,38 +279,20 @@ static void sh2_WDTExec(SH2 *sh, u32 cycles)
 	OCR_WTCNT = wdt;
 }
 
-void sh2_Step(SH2 *sh)
-{
-	//XXX.
-}
-
 void sh2_NMI(SH2 *sh)
 {
-   OCR_ICR |= 0x800; // real value is 0x8000
-   sh2_SetInterrupt(sh, 0xB, 0x10);
-}
-
-void sh2_SetRegs(SH2 *sh, u32 *regs[32])
-{
-
-}
-
-void sh2_GetRegs(SH2 *sh, u32 *regs[32])
-{
-	//XXX: DO this
+	OCR_ICR |= 0x8000;
+	sh2_SetInterrupt(sh, 0xB, 0x10);
 }
 
 void sh2_WriteNotify(u32 start, u32 len)
 {
-	//XXX: DO this
-	//Only record 4kb page writes
 	HashClearRange(start, start + len);
 }
 
 
 void sh2_DMATransfer(SH2 *sh, u32 dma_slot)
 {
-
 	u32 *chcr = &ADDR_32(sh->on_chip + (OC_CHCR0 + (dma_slot << 4)));
 	u32 *sar = &ADDR_32(sh->on_chip + (OC_SAR0 + (dma_slot << 4)));
 	u32 *dar = &ADDR_32(sh->on_chip + (OC_DAR0 + (dma_slot << 4)));
@@ -414,24 +411,108 @@ void sh2_DMAExec(SH2 *sh)
 //On-chip
 u8 sh2_OnchipRead8(u32 addr)
 {
-	if ((addr & ~0x1) == 0x14) {
-		addr = OC_OCRA + (sh_ctx->on_chip[OC_TOCR] & 0x10) + (addr & 0x1);
+	SH2 * const sh = sh_ctx;
+	switch(addr) {
+		case 0x000: return OCR_SMR;
+		case 0x001: return OCR_BRR;
+		case 0x002: return OCR_SCR;
+		case 0x003: return OCR_TDR;
+		case 0x004: return OCR_SSR;
+		case 0x005: return OCR_RDR;
+		case 0x010: return OCR_TIER;
+		case 0x011: return OCR_FTCSR;
+		case 0x012: return OCR_FRC >> 8;
+		case 0x013: return OCR_FRC & 0xFF;
+		case 0x014:
+			if (!(OCR_TOCR & 0x10))
+				return OCR_OCRA >> 8;
+			else
+				return OCR_OCRB >> 8;
+		case 0x015:
+			if (!(OCR_TOCR & 0x10))
+				return OCR_OCRA & 0xFF;
+			else
+				return OCR_OCRB & 0xFF;
+		case 0x016: return OCR_TCR;
+		case 0x017: return OCR_TOCR;
+		case 0x018: return OCR_FICR >> 8;
+		case 0x019: return OCR_FICR & 0xFF;
+		case 0x060: return OCR_IPRB >> 8;
+		case 0x062: return OCR_VCRA >> 8;
+		case 0x063: return OCR_VCRA & 0xFF;
+		case 0x064: return OCR_VCRB >> 8;
+		case 0x065: return OCR_VCRB & 0xFF;
+		case 0x066: return OCR_VCRC >> 8;
+		case 0x067: return OCR_VCRC & 0xFF;
+		case 0x068: return OCR_VCRD >> 8;
+		case 0x080: return OCR_WTCSR;
+		case 0x081: return OCR_WTCNT;
+		case 0x092: return OCR_CCR;
+		case 0x0E0: return OCR_ICR >> 8;
+		case 0x0E1: return OCR_ICR & 0xFF;
+		case 0x0E2: return OCR_IPRA >> 8;
+		case 0x0E3: return OCR_IPRA & 0xFF;
+		case 0x0E4: return OCR_VCRWDT >> 8;
+		case 0x0E5: return OCR_VCRWDT & 0xFF;
+		default: return 0;
 	}
-	return ADDR_8(sh_ctx->on_chip + addr);
 }
 
 u16 sh2_OnchipRead16(u32 addr)
 {
-	return ADDR_16(sh_ctx->on_chip + addr);
+	SH2 * const sh = sh_ctx;
+	switch(addr) {
+		case 0x060: return OCR_IPRB;
+		case 0x062: return OCR_VCRA;
+		case 0x064: return OCR_VCRB;
+		case 0x066: return OCR_VCRC;
+		case 0x068: return OCR_VCRD;
+		case 0x0E0: return OCR_ICR;
+		case 0x0E2: return OCR_IPRA;
+		case 0x0E4: return OCR_VCRWDT;
+		case 0x1E2: return OCR_BCR1;
+		case 0x1E6: return OCR_BCR2;
+		case 0x1EA: return OCR_WCR;
+		case 0x1EE: return OCR_MCR;
+		case 0x1F2: return OCR_RTCSR;
+		case 0x1F6: return OCR_RTCNT;
+		case 0x1FA: return OCR_RTCOR;
+		default: return 0;
+	}
 }
 
 u32 sh2_OnchipRead32(u32 addr)
 {
-	//Repeated registers
-	if ((addr >= 0x120) && (addr <= 0x13C)) {
-		addr ^= 0x20;
+	SH2 * const sh = sh_ctx;
+	switch (addr) {
+		case 0x100: case 0x120: return OCR_DVSR;
+		case 0x104: case 0x124: return OCR_DVDNTL;
+		case 0x108: case 0x128: return OCR_DVCR;
+		case 0x10C: case 0x12C: return OCR_VCRDIV;
+		case 0x110: case 0x130: return OCR_DVDNTH;
+		case 0x114: case 0x134: return OCR_DVDNTL;
+		case 0x118: case 0x138: return OCR_DVDNTUH;
+		case 0x11C: case 0x13C: return OCR_DVDNTUL;
+		case 0x180: return OCR_SAR0;
+		case 0x184: return OCR_DAR0;
+		case 0x188: return OCR_TCR0;
+		case 0x18C: return OCR_CHCR0;
+		case 0x190: return OCR_SAR1;
+		case 0x194: return OCR_DAR1;
+		case 0x198: return OCR_TCR1;
+		case 0x19C: return OCR_CHCR1;
+		case 0x1A0: return OCR_VCRDMA0;
+		case 0x1A8: return OCR_VCRDMA1;
+		case 0x1B0: return OCR_DMAOR;
+		case 0x1E0: return OCR_BCR1;
+		case 0x1E4: return OCR_BCR2;
+		case 0x1E8: return OCR_WCR;
+		case 0x1EC: return OCR_MCR;
+		case 0x1F0: return OCR_RTCSR;
+		case 0x1F4: return OCR_RTCNT;
+		case 0x1F8: return OCR_RTCOR;
+		default: return 0;
 	}
-	return ADDR_32(sh_ctx->on_chip + addr);
 }
 
 void sh2_OnchipWrite8(u32 addr, u8 val)
@@ -440,7 +521,7 @@ void sh2_OnchipWrite8(u32 addr, u8 val)
 	switch(addr) {
 		//Is this needed? v
 		case 0x000: OCR_SMR = val; break;
-		case 0x001: OCR_SMR = val; break;
+		case 0x001: OCR_BRR = val; break;
 		case 0x002:
 			if (!(val & 0x20)) {//If Transmitter is getting disabled, set TDRE
 				OCR_SSR |= 0x80;
@@ -497,6 +578,7 @@ void sh2_OnchipWrite16(u32 addr, u16 val)
 			switch (val >> 8) {
 				case 0xA5: {
 					sh_ctx->wdt_shift = (0xDCA98761 >> ((val & 7) << 2)) & 0xF;
+					sh_ctx->wdt_stat = val ^ 0x60;
 					OCR_WTCSR = val | 0x18;} break;
 				case 0x5A: {OCR_WTCNT = val;} break;
 			}
@@ -562,7 +644,7 @@ static inline void _calcDiv32(SH2 *sh, s32 val)
 	OCR_DVDNTUH = OCR_DVDNTH = res_h;
 	OCR_DVDNTUL = OCR_DVDNTL = OCR_DVDNT = res_l;
     if ((OCR_DVCR & 0x3) == 0x3) {
-		sh2_SetInterrupt(sh_ctx, OCR_VCRDIV & 0x7F, (OCR_IPRA >> 12) & 0xF);
+		sh2_SetInterrupt(sh, OCR_VCRDIV & 0x7F, (OCR_IPRA >> 12) & 0xF);
     }
 }
 
@@ -631,7 +713,7 @@ static inline void _calcDiv64(SH2 *sh, u32 val)
 	OCR_DVDNTUL = OCR_DVDNTL = OCR_DVDNT = res_l;
 
 	if ((OCR_DVCR & 0x3) == 0x3) {
-		sh2_SetInterrupt(sh_ctx, OCR_VCRDIV & 0x7F, (OCR_IPRA >> 12) & 0xF);
+		sh2_SetInterrupt(sh, OCR_VCRDIV & 0x7F, (OCR_IPRA >> 12) & 0xF);
 	}
 #else
 	s32 divisor = (s32) OCR_DVSR;
@@ -748,7 +830,7 @@ void sh2_OnchipWrite32(u32 addr, u32 val)
 }
 
 //Access timings for cycles
-
+#ifndef SH2_TEST
 
 u8 sh2_Read8(u32 addr)
 {
@@ -889,20 +971,53 @@ void sh2_Write32(u32 addr, u32 val)
 	}
 }
 
-u32* sh2_GetPCAddr(u32 pc)
+//#define MAX_PREV 1024
+//const u32 dol_breakpoint = 0x06000950;
+//u32 dol_prev_unreached = 0;
+//u32 dol_breakpoint_val = 0;
+//u32 dol_prev_pos = 0;
+//u32 dol_prev[MAX_PREV];
+
+u16* sh2_GetPCAddr(u32 pc)
 {
-	switch((pc >> 19) & 0xFF) {
+	//Debug
+	//dol_prev[dol_prev_pos] = pc;
+	//dol_prev_pos = (dol_prev_pos+1) & (MAX_PREV-1);
+	////if (pc_prev_unreached == 0x0601C6DA && key == pc_breakpoint) {
+	//if (pc == dol_breakpoint) {
+	//	dol_breakpoint_val = pc;
+	//}
+
+	switch((pc >> 20) & 0xFF) {
 		case 0x000: // Bios
-			return (u32*) (bios_rom + (pc & (BIOS_SIZE - 1)));
-		case 0x040: // CS0
+			return (u16*) (bios_rom + (pc & (BIOS_SIZE - 1)));
+		case 0x002: // LWRAM
+			return (u16*) (wram + (pc & (LOW_WRAM_SIZE - 1)));
+		case 0x020: // CS0
 			return cs0_getPCAddr(pc);
-		default: // Assume WRAM... could lead to terrible sideeffects
-			pc |= ((pc >> 6) & HIGH_WRAM_SIZE); // High WRAM bit
-			return (u32*) (wram + (pc & (WRAM_SIZE - 1)));
+		case 0x060: // HWRAM
+		case 0x061:
+		case 0x062:
+		case 0x063:
+		case 0x064:
+		case 0x065:
+		case 0x066:
+		case 0x067:
+		case 0x068:
+		case 0x069:
+		case 0x06A:
+		case 0x06B:
+		case 0x06C:
+		case 0x06D:
+		case 0x06E:
+		case 0x06F:
+			return (u16*) (wram + LOW_WRAM_SIZE + (pc & (HIGH_WRAM_SIZE - 1)));
+		default: // Invalid
+			return (u16*) (0xDEADBEEF);
 	}
 	return 0;
 }
-
+#endif
 
 //Input Capture
 void sh2_MSH2InputCaptureWrite16(u32 addr, u16 data)
@@ -912,7 +1027,7 @@ void sh2_MSH2InputCaptureWrite16(u32 addr, u16 data)
 	OCR_FICR = OCR_FRC; // Copy FRC register to FICR
  	// Time for an Interrupt?
 	if (OCR_TIER & 0x80) {
-		sh2_SetInterrupt(&ssh2, (OCR_VCRC >> 8) & 0x7F, (OCR_IPRB >> 8) & 0xF);
+		sh2_SetInterrupt(&msh2, (OCR_VCRC >> 8) & 0x7F, (OCR_IPRB >> 8) & 0xF);
 	}
 }
 
@@ -924,5 +1039,40 @@ void sh2_SSH2InputCaptureWrite16(u32 addr, u16 data)
  	// Time for an Interrupt?
 	if (OCR_TIER & 0x80) {
 		sh2_SetInterrupt(&ssh2, (OCR_VCRC >> 8) & 0x7F, (OCR_IPRB >> 8) & 0xF);
+	}
+}
+
+FILE *sh2_fp;
+u32 sh2_fp_count;
+
+void __OpenSH2Writer(void) {
+	sh2_fp_count = 0;
+	sh2_fp = fopen("sd:/sh2_new_reg_dump.bin", "wb");
+}
+
+void __CloseSH2Writer(void) {
+	fclose(sh2_fp);
+	sh2_fp = NULL;
+}
+
+void __WriteSH2(void) {
+	if (!sh2_fp) {
+		return;
+	}
+	fwrite((&sh2_fp_count) - 1, 4, 1, sh2_fp);
+	sh2_fp_count++;
+	for ( int i = 0; i < 16; ++i){
+		fwrite(&msh2.r[i], 4, 1, sh2_fp);
+	}
+	fwrite(&msh2.pc, 4, 1, sh2_fp);
+	fwrite(&msh2.pr, 4, 1, sh2_fp);
+	fwrite(&msh2.gbr, 4, 1, sh2_fp);
+	fwrite(&msh2.vbr, 4, 1, sh2_fp);
+	fwrite(&msh2.mach,4, 1, sh2_fp);
+	fwrite(&msh2.macl, 4, 1, sh2_fp);
+	fwrite(&msh2.sr, 4, 1, sh2_fp);
+
+	if (msh2.pc == 0x06000952) {
+		__CloseSH2Writer();
 	}
 }

@@ -44,6 +44,7 @@ DDEFINES+= -DUSE_SCSP2
 DDEFINES+= -DSCSP_PLUGIN
 DDEFINES+= -DAUTOLOADPLUGIN
 DDEFINES+= -DHAVE_STRCASECMP
+#DDEFINES+= -DSH2_INT
 #DDEFINES+= -DUSE_SH2_OLD
 
 VDEFINES=-DPACKAGE=\"seta-gx\" -DVERSION=\"r2926\" -DWIIVERSION=\"ver.\ 1.0\"  -DREENTRANT_SYSCALLS_PROVIDED
@@ -107,7 +108,7 @@ endif
 
 export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES)) $(addsuffix .o,$(TPLFILES))
 export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o)
-export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) m68kops.o m68kcpu.o m68kopdm.o m68kopac.o m68kopdm.o m68kopnz.o dsihandler.o jit_code.o
+export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) m68kops.o m68kcpu.o m68kopdm.o m68kopac.o m68kopdm.o m68kopnz.o dsihandler.o jit_code.o sh2_int.o
 
 export HFILES := $(addsuffix .h,$(subst .,_,$(BINFILES))) $(addsuffix .h,$(subst .,_,$(TPLFILES)))
 
@@ -191,6 +192,9 @@ dsihandler.o: ./vm/dsihandler.s
 	$(CC) -x assembler-with-cpp $(CFLAGS) -D_LANGUAGE_ASSEMBLY -c -o $@ $<
 
 jit_code.o: ./sh2/drc/jit_code.s
+	$(CC) -x assembler-with-cpp $(CFLAGS) -D_LANGUAGE_ASSEMBLY -c -o $@ $<
+
+sh2_int.o: ./sh2/sh2_int.s
 	$(CC) -x assembler-with-cpp $(CFLAGS) -D_LANGUAGE_ASSEMBLY -c -o $@ $<
 
 -include $(DEPSDIR)/*.d

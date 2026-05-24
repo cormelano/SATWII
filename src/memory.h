@@ -279,12 +279,12 @@ void FASTCALL mem_Write32(u32 addr, u32 val);
 #define mem_CyclesR(addr)		1
 #define mem_CyclesW(addr)		1
 #else
-#define mem_Read8(addr)			(mem_read8_arr[((addr) >> 19) & 0xFF](addr))
-#define mem_Read16(addr)		(mem_read16_arr[((addr) >> 19) & 0xFF](addr))
-#define mem_Read32(addr)		(mem_read32_arr[((addr) >> 19) & 0xFF](addr))
-#define mem_Write8(addr, val)	(mem_write8_arr[((addr) >> 19) & 0xFF](addr, val))
-#define mem_Write16(addr, val)	(mem_write16_arr[((addr) >> 19) & 0xFF](addr, val))
-#define mem_Write32(addr, val)	(mem_write32_arr[((addr) >> 19) & 0xFF](addr, val))
+#define mem_Read8(addr)			(mem_read8_arr[((addr) >> 19) & 0xFF]((addr) & 0x0FFFFFFF))
+#define mem_Read16(addr)		(mem_read16_arr[((addr) >> 19) & 0xFF]((addr) & 0x0FFFFFFF))
+#define mem_Read32(addr)		(mem_read32_arr[((addr) >> 19) & 0xFF]((addr) & 0x0FFFFFFF))
+#define mem_Write8(addr, val)	(mem_write8_arr[((addr) >> 19) & 0xFF]((addr) & 0x0FFFFFFF, val))
+#define mem_Write16(addr, val)	(mem_write16_arr[((addr) >> 19) & 0xFF]((addr) & 0x0FFFFFFF, val))
+#define mem_Write32(addr, val)	(mem_write32_arr[((addr) >> 19) & 0xFF]((addr) & 0x0FFFFFFF, val))
 #define mem_CyclesR(addr)		(mem_r_cycles[((addr) >> 19) & 0xFF])
 #define mem_CyclesW(addr)		(mem_w_cycles[((addr) >> 19) & 0xFF])
 #endif

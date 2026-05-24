@@ -187,16 +187,16 @@ static void gui_DrawControllers()
 		u32 color = (perpad[i].type ? 0xFFFF : 0xbdd7);
 		GX_Position2u16(dx, dy);		// Top Left
 		GX_Color1u16(color);
-		GX_TexCoord2u8(pad_tex+24, 4);
+		GX_TexCoord2u8(pad_tex+16, 4);
 		GX_Position2u16(dx+32, dy);	// Top Right
 		GX_Color1u16(color);
-		GX_TexCoord2u8(pad_tex+32, 4);
+		GX_TexCoord2u8(pad_tex+24, 4);
 		GX_Position2u16(dx+32, dy+24);	// Bottom Right
 		GX_Color1u16(color);
-		GX_TexCoord2u8(pad_tex+32, 7);
+		GX_TexCoord2u8(pad_tex+24, 7);
 		GX_Position2u16(dx, dy+24);	// Bottom Left
 		GX_Color1u16(color);
-		GX_TexCoord2u8(pad_tex+24, 7);
+		GX_TexCoord2u8(pad_tex+16, 7);
 
 		GX_Position2u16(dx+24, dy+16);		// Top Left
 		GX_Color1u16(color);
@@ -289,32 +289,32 @@ static void gui_DrawItems(GuiItems *items, u32 width, u32 height)
 		u32 xnum = x - 8;
 			GX_Position2u16(xnum, y);					// Top Left
 			GX_Color1u16(0xbdd7);
-			GX_TexCoord2u8(22, 4);
+			GX_TexCoord2u8(10, 6);
 			GX_Position2u16(xnum + 4, y);			// Top Right
 			GX_Color1u16(0xbdd7);
-			GX_TexCoord2u8(23, 4);
+			GX_TexCoord2u8(11, 6);
 			GX_Position2u16(xnum + 4, y + 8);	// Bottom Right
 			GX_Color1u16(0xbdd7);
-			GX_TexCoord2u8(23, 5);
+			GX_TexCoord2u8(11, 7);
 			GX_Position2u16(xnum, y + 8);			// Bottom Left
 			GX_Color1u16(0xbdd7);
-			GX_TexCoord2u8(22, 5);
+			GX_TexCoord2u8(10, 7);
 		for (u32 i = 0; i < 3; ++i) {
-			u32 chr_x = (num % 10) + 12;
+			u32 chr_x = (num % 10);
 			xnum -= 4;
 			//Draw the file number
 			GX_Position2u16(xnum, y);					// Top Left
 			GX_Color1u16(0xbdd7);
-			GX_TexCoord2u8(chr_x, 4);
+			GX_TexCoord2u8(chr_x, 6);
 			GX_Position2u16(xnum + 4, y);			// Top Right
 			GX_Color1u16(0xbdd7);
-			GX_TexCoord2u8(chr_x + 1, 4);
+			GX_TexCoord2u8(chr_x + 1, 6);
 			GX_Position2u16(xnum + 4, y + 8);	// Bottom Right
 			GX_Color1u16(0xbdd7);
-			GX_TexCoord2u8(chr_x + 1, 5);
+			GX_TexCoord2u8(chr_x + 1, 7);
 			GX_Position2u16(xnum, y + 8);			// Bottom Left
 			GX_Color1u16(0xbdd7);
-			GX_TexCoord2u8(chr_x, 5);
+			GX_TexCoord2u8(chr_x, 7);
 			num /= 10;
 		}
 		GX_End();

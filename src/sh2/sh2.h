@@ -3,8 +3,7 @@
 #ifndef __SH2_H__
 #define __SH2_H__
 
-#include <gccore.h>
-#include "../memory.h"
+#include <gctypes.h>
 
 //===================================
 // SH2 Flags
@@ -195,8 +194,8 @@
 
 #define MAX_INTERRUPTS 	64 	//TODO: CHECK THIS
 
-#define EXT_IMM8(imm)		((imm & 0xFF) | -(imm & 0x80u))
-#define EXT_IMM12(imm)		((imm & 0xFFF) | -(imm & 0x800u))
+#define EXT_IMM8(imm)		(((s32)(imm << 24)) >> 24)
+#define EXT_IMM12(imm)		(((s32)(imm << 20)) >> 20)
 
 
 typedef struct SH2_tag
@@ -221,7 +220,7 @@ typedef struct SH2_tag
 	u32 frc_leftover;
 	u32 wdt_leftover;
 	u32 wdt_shift;
-	//u32 frc_shift; // ((OC_TRC & 3) << 1) + 3
+	u32 wdt_stat;
 
 	//u32 wdt_cntl; // isenable (OC_WTCSR & 0x20), isinterval (~OC_WTCSR & 0x40)
 	//XXX: Interrupt stuff
@@ -260,11 +259,14 @@ u32  sh2_Read32(u32 addr);
 void sh2_Write8(u32 addr, u8 val);
 void sh2_Write16(u32 addr, u16 val);
 void sh2_Write32(u32 addr, u32 val);
-u32* sh2_GetPCAddr(u32 pc);
+u16* sh2_GetPCAddr(u32 pc);
 
 //Input Capture
 void sh2_MSH2InputCaptureWrite16(u32 addr, u16 data);
 void sh2_SSH2InputCaptureWrite16(u32 addr, u16 data);
 
+void __OpenSH2Writer(void);
+void __CloseSH2Writer(void);
+void __WriteSH2(void);
 
 #endif /* __SH2_H__ */

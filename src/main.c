@@ -527,7 +527,7 @@ int CoreExec()
 		yinit.biospath = biospath;
 		fclose(fp);
 	}
-#if 0
+#if 1
 	yinit.cdpath = isofilename;
 #else
 	yinit.cdpath = NULL;

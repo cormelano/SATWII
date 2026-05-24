@@ -666,6 +666,8 @@ void SucDmaExec(scudmainfo_struct * dma, int * time ) {
         }
 #ifdef USE_SH2_OLD
         SH2WriteNotify(start, dma->WriteAddress - start);
+#else
+		sh2_WriteNotify(start, dma->WriteAddress - start);
 #endif
 	}
       else {

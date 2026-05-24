@@ -82,7 +82,7 @@ int SH2Init(int coreid)
       MSH2 = SSH2 = NULL;
       return -1;
    }
-
+   _O_OpenSH2Writer();
    return 0;
 }
 
@@ -1283,3 +1283,39 @@ void FASTCALL SSH2InputCaptureWriteWord(UNUSED u32 addr, UNUSED u16 data)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+
+FILE *sh2_fpo;
+u32 sh2_fpo_count;
+
+void _O_OpenSH2Writer(void) {
+	sh2_fpo_count = 0;
+	sh2_fpo = fopen("sd:/sh2_old_reg_dump.bin", "wb");
+}
+
+void _O_CloseSH2Writer(void) {
+	fclose(sh2_fpo);
+	sh2_fpo = NULL;
+}
+
+void _O_WriteSH2(void) {
+	if (!sh2_fpo) {
+		return;
+	}
+	fwrite(&sh2_fpo_count, 4, 1, sh2_fpo);
+	sh2_fpo_count++;
+	for ( int i = 0; i < 16; ++i) {
+		fwrite(&MSH2->regs.R[i], 4, 1, sh2_fpo);
+	}
+	fwrite(&MSH2->regs.PC, 4, 1, sh2_fpo);
+	fwrite(&MSH2->regs.PR, 4, 1, sh2_fpo);
+	fwrite(&MSH2->regs.GBR, 4, 1, sh2_fpo);
+	fwrite(&MSH2->regs.VBR, 4, 1, sh2_fpo);
+	fwrite(&MSH2->regs.MACH,4, 1, sh2_fpo);
+	fwrite(&MSH2->regs.MACL, 4, 1, sh2_fpo);
+	fwrite(&MSH2->regs.SR.all, 4, 1, sh2_fpo);
+	if (sh2_fpo_count == 1736798) {
+		_O_CloseSH2Writer();
+	}
+}
+

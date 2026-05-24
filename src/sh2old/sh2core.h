@@ -26,7 +26,10 @@
 
 
 #define SH2CORE_DEFAULT     -1
-#define MAX_INTERRUPTS 50
+
+#ifndef MAX_INTERRUPTS
+#define MAX_INTERRUPTS 64
+#endif
 
 #ifdef MACH
 #undef MACH
@@ -361,6 +364,8 @@ void FASTCALL DataArrayWriteLong(u32 addr, u32 val);
 void FASTCALL MSH2InputCaptureWriteWord(u32 addr, u16 data);
 void FASTCALL SSH2InputCaptureWriteWord(u32 addr, u16 data);
 
-
+void _O_OpenSH2Writer(void);
+void _O_CloseSH2Writer(void);
+void _O_WriteSH2(void);
 
 #endif

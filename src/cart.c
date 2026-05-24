@@ -9,7 +9,7 @@ WriteFunc32 cs0_write32;
 ReadFunc8 cs0_read8;
 ReadFunc16 cs0_read16;
 ReadFunc32 cs0_read32;
-u32* (*cs0_getPCAddr)(u32 pc);
+u16* (*cs0_getPCAddr)(u32 pc);
 Cartridge cart;
 
 
@@ -22,7 +22,7 @@ static void cs0_NoneWrite8(u32 addr, u8 val)   {}
 static void cs0_NoneWrite16(u32 addr, u16 val) {}
 static void cs0_NoneWrite32(u32 addr, u32 val) {}
 
-static u32* cs0_NoneRamGetPCAddr(u32 pc) {return NULL;}
+static u16* cs0_NoneRamGetPCAddr(u32 pc) {return NULL;}
 
 
 /*1MB RAM RW functions*/
@@ -83,12 +83,12 @@ static void cs0_1MBRamWrite32(u32 addr, u32 val)
 	}
 }
 
-static u32* cs0_1MBRamGetPCAddr(u32 pc)
+static u16* cs0_1MBRamGetPCAddr(u32 pc)
 {
 	u32 mask = (1 << ((pc >> 20) & 0x1F)) & 0x50;
 	pc = (pc & 0x7FFFF) | (pc & 0x200000) >> 2;
 	if (mask) {
-		return (u32*)(cart.data + pc);
+		return (u16*)(cart.data + pc);
 	}
 	return NULL;
 }
@@ -146,11 +146,11 @@ static void cs0_4MBRamWrite32(u32 addr, u32 val)
 	}
 }
 
-static u32* cs0_4MBRamGetPCAddr(u32 pc)
+static u16* cs0_4MBRamGetPCAddr(u32 pc)
 {
 	u32 mask = (1 << ((pc >> 20) & 0x1F)) & 0xF0;
 	if (mask) {
-		return (u32*)(cart.data + pc);
+		return (u16*)(cart.data + pc);
 	}
 	return NULL;
 }
@@ -187,9 +187,9 @@ static void cs0_RomWrite32(u32 addr, u32 val)
 	*((u32*)(cart.data + (addr & 0x1FFFFF))) = val;
 }
 
-static u32* cs0_RomGetPCAddr(u32 pc)
+static u16* cs0_RomGetPCAddr(u32 pc)
 {
-	return (u32*)(cart.data + (pc & 0x1FFFFF));
+	return (u16*)(cart.data + (pc & 0x1FFFFF));
 }
 
 

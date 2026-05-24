@@ -22,10 +22,10 @@
 #include "peripheral.h"
 #include <ogcsys.h>
 #include <wiiuse/wpad.h>
-//#include <joy.h>
+#include <ogc/n64.h>
 
 PerPad perpad[PER_PADMAX];
-
+u32 pad_status = 0;
 PerData per_data;
 //PADStatus status_gc[PAD_CHANMAX];
 //JOYStatus status_64[JOY_CHANMAX];
@@ -39,6 +39,7 @@ PerData per_data;
 void per_Init(void)
 {
 	//JOY_Init(status_64, status_gc);
+	pad_status = 0;
 	PAD_Init();
 	WPAD_Init();
 	per_data.ids[0] = PER_ID_DIGITAL;
@@ -109,8 +110,8 @@ static void per_N64ToSat(u32 indx, u32 *exit_code)
 	//s8 axis_y = perpad[indx].y;
 	//TODO: only do this when using the ANALOGUE controller
 	u32 btns = perpad[indx].btn;
+	*exit_code |= (btns & (N64_BUTTON_L | N64_BUTTON_Z)) == (N64_BUTTON_L | N64_BUTTON_Z);
 	//TODO: UNCOMMENT
-	//*exit_code |= (btns & (JOY_TRG_R | JOY_TRG_L | JOY_TRG_Z)) == (JOY_TRG_R | JOY_TRG_L | JOY_TRG_Z);
 
 	//N64 controller is basically a Saturn controller, no need for remap
 	u32 sat_btns =
@@ -217,11 +218,95 @@ static void per_ClassicToSat(u32 indx, u32 *exit_code)
 	perpad[indx].btn = sat_btns;
 }
 
+u32 _per_ScanPads(u32 *exit_code)
+{
+	PADStatus padstatus[PAD_CHANMAX];
+	static N64Status n64status[PAD_CHANMAX] = {
+		{ .err = N64_ERR_NO_CONTROLLER },
+		{ .err = N64_ERR_NO_CONTROLLER },
+		{ .err = N64_ERR_NO_CONTROLLER },
+		{ .err = N64_ERR_NO_CONTROLLER }
+	};
+
+	u32 per_num = 0;
+	u32 padBit;
+	u32 resetBits = 0;
+
+	PAD_Read(padstatus);
+	for (s32 i = 0; i < PAD_CHANMAX; ++i) {
+		padBit = PAD_CHAN_BIT(i);
+
+		switch(padstatus[i].err) {
+		case PAD_ERR_NONE:
+			perpad[per_num].type = PAD_TYPE_GCPAD;
+			perpad[per_num].x = padstatus[i].stickX;
+			perpad[per_num].y = padstatus[i].stickY;
+			perpad[per_num].sx = padstatus[i].substickX;
+			perpad[per_num].sy = padstatus[i].substickY;
+			perpad[per_num].prev_btn = perpad[per_num].btn;
+			perpad[per_num].btn = padstatus[i].button;
+			per_GCToSat(per_num, exit_code);
+			pad_status |= padBit;
+			per_num++;
+			break;
+
+		case PAD_ERR_NO_CONTROLLER:
+			switch(SI_Probe(i)) {
+			case SI_ERROR_BUSY:
+				if (n64status[i].err == N64_ERR_NO_CONTROLLER) {
+					goto no_controller;
+				}
+
+			case SI_N64_CONTROLLER:
+				N64_ReadAsync(i, &n64status[i], NULL);
+
+				switch(n64status[i].err) {
+				case N64_ERR_READY:
+					perpad[per_num].type = PAD_TYPE_N64PAD;
+					perpad[per_num].x        = n64status[i].stickX;
+					perpad[per_num].y        = n64status[i].stickY;
+					perpad[per_num].sx       = 0;
+					perpad[per_num].sy       = 0;
+					perpad[per_num].prev_btn = perpad[per_num].btn;
+					perpad[per_num].btn      = n64status[i].button;
+					per_N64ToSat(per_num, exit_code);
+					pad_status |= padBit;
+					per_num++;
+					break;
+
+				case N64_ERR_NO_CONTROLLER:
+					goto no_controller;
+					break;
+
+				default:
+					goto not_ready;
+					break;
+				}
+				break;
+
+no_controller:
+			default:
+				resetBits |= padBit;
+				break;
+			}
+			break;
+
+not_ready:
+		default:
+				per_num++;
+			break;
+		}
+	}
+	if(resetBits) {
+		PAD_Reset(resetBits);
+	}
+	return per_num;
+}
+
 
 u32 per_updatePads()
 {
 	u32 port_stat[2] = {PER_STAT_NONE, PER_STAT_NONE};
-	u32 per_num = 0;
 
 	//Reset ports
 	u32 exit_code = 0;
@@ -232,20 +317,7 @@ u32 per_updatePads()
 	per_data.port2_offset = 1;
 
 	//Fill with gc controllers
-	u32 connected = PAD_ScanPads();
-	for (u32 i = 0; i < PAD_CHANMAX; ++i) {
-		if ((connected >> i) & 1) {
-			perpad[per_num].type = PAD_TYPE_GCPAD;
-			perpad[per_num].x = PAD_StickX(i);
-			perpad[per_num].y = PAD_StickY(i);
-			perpad[per_num].sx = PAD_SubStickX(i);
-			perpad[per_num].sy = PAD_SubStickY(i);
-			perpad[per_num].prev_btn = perpad[per_num].btn;
-			perpad[per_num].btn = PAD_ButtonsHeld(i);
-			per_GCToSat(per_num, &exit_code);
-			++per_num;
-		}
-	}
+	u32 per_num = _per_ScanPads(&exit_code);
 
 	//Fill with wiimote
 	for (u32 i = 0; i < PAD_CHANMAX; ++i) {

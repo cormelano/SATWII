@@ -52,7 +52,7 @@
 extern char saves_dir[128];
 extern int eachbackupramon;
 extern char prev_itemnum[512];
-int declinenum = 15; //10 in original yabause
+int declinenum = 10; //10 in original yabause
 int dividenumclock = 1; //1 in original yabause
 
 #ifdef SYS_PROFILE_H

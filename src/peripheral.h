@@ -370,21 +370,20 @@ extern PerPad perpad[PER_PADMAX];
 #define WUP_BIT_RIGHT		(7+16)
 
 //N64 controller bit shifts
-#define N64_BIT_CR      0
-#define N64_BIT_CL      1
-#define N64_BIT_CD      2
-#define N64_BIT_CU      3
-#define N64_BIT_R       4
-#define N64_BIT_L       5
-#define N64_BIT_RIGHT   8
-#define N64_BIT_LEFT    9
-#define N64_BIT_DOWN    10
-#define N64_BIT_UP      11
-#define N64_BIT_STR     12
-#define N64_BIT_Z       13
-#define N64_BIT_B       14
-#define N64_BIT_A       15
-
+#define N64_BIT_RIGHT   0
+#define N64_BIT_LEFT    1
+#define N64_BIT_DOWN    2
+#define N64_BIT_UP      3
+#define N64_BIT_STR     4
+#define N64_BIT_Z       5
+#define N64_BIT_B       6
+#define N64_BIT_A       7
+#define N64_BIT_CR      8
+#define N64_BIT_CL      9
+#define N64_BIT_CD      10
+#define N64_BIT_CU      11
+#define N64_BIT_R       12
+#define N64_BIT_L       13
 
 //TODO: Make generic wrapper for controller
 

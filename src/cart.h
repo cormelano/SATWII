@@ -35,7 +35,7 @@ extern ReadFunc8   cs0_read8;
 extern ReadFunc16  cs0_read16;
 extern ReadFunc32  cs0_read32;
 
-extern u32* (*cs0_getPCAddr)(u32 pc);
+extern u16* (*cs0_getPCAddr)(u32 pc);
 
 u8   cs1_Read8(u32 addr);
 u16  cs1_Read16(u32 addr);
