@@ -22,7 +22,7 @@
 #include "peripheral.h"
 #include <ogcsys.h>
 #include <wiiuse/wpad.h>
-#include <ogc/n64.h>
+//#include <ogc/n64.h>
 
 PerPad perpad[PER_PADMAX];
 u32 pad_status = 0;
