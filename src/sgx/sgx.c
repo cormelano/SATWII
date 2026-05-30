@@ -125,7 +125,7 @@ static GXTlutRegion* __SGX_CalcTlutRegion(u32 idx)
 	return &tlut_region;
 }
 
-static GXTexRegion* __SGX_CalcTexRegion(const GXTexObj *obj, u8 mapid)
+static GXTexRegion* __SGX_CalcTexRegion(GXTexObj *obj, u8 mapid)
 {
 	if (GX_GetTexObjFmt(obj) == GX_TF_RGBA8) {
 		return &tex_region[1];
