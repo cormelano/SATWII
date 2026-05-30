@@ -49,7 +49,7 @@ DDEFINES+= -DHAVE_STRCASECMP
 
 VDEFINES=-DPACKAGE=\"satwii\" -DVERSION=\"r2926\" -DWIIVERSION=\"SATWII\ v0.1\" -DREENTRANT_SYSCALLS_PROVIDED -DSATWII
 
-MACHDEP = -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -fsigned-char -ffast-math -funroll-loops -fauto-inc-dec -finline-functions -fomit-frame-pointer -flto -mpaired
+MACHDEP = -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -fsigned-char -ffast-math -funroll-loops -fauto-inc-dec -finline-functions -fomit-frame-pointer -flto
 #This is only for profiling with gperf
 
 MACHDEP += #-fomit-frame-pointer
