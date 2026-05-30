@@ -104,6 +104,7 @@ void per_Init(void)
 */
 
 
+#if 0
 static void per_N64ToSat(u32 indx, u32 *exit_code)
 {
 	//s8 axis_x = perpad[indx].x;
@@ -131,6 +132,7 @@ static void per_N64ToSat(u32 indx, u32 *exit_code)
 	0x300;	//First 2 bits must be 0
 	perpad[indx].btn = sat_btns;
 }
+#endif
 
 
 static void per_GCToSat(u32 indx, u32 *exit_code)
