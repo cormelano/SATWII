@@ -39,7 +39,7 @@ void OnchipReset(SH2_struct *context);
 void FRTExec(u32 cycles);
 void WDTExec(u32 cycles);
 void DMAExec(void);
-void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR, u32 *TCR, u32 *VCRDMA);
+void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR_reg, u32 *TCR, u32 *VCRDMA);
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -1168,7 +1168,7 @@ void DMAExec(void) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR, u32 *TCR, u32 *VCRDMA)
+void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR_reg, u32 *TCR, u32 *VCRDMA)
 {
    int size;
    u32 i, i2;
