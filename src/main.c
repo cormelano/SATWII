@@ -206,7 +206,7 @@ void fat_remount()
    flag_mount = TRUE;
 }
 
-void reset()
+void reset(u32 irq, void* ctx)
 {
    reset_emu = 1;
 }
