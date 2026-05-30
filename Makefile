@@ -20,7 +20,7 @@ include $(DEVKITPRO)/libogc2/wii_rules
 # SOURCES is a list of directories containing source code
 # INCLUDES is a list of directories containing extra header files
 #---------------------------------------------------------------------------------
-TARGET		:=	seta-gx
+TARGET		:=	satwii
 BUILD		:=	build
 SOURCES		:=	src \
 			src/osd \
@@ -47,13 +47,13 @@ DDEFINES+= -DHAVE_STRCASECMP
 #DDEFINES+= -DSH2_INT
 #DDEFINES+= -DUSE_SH2_OLD
 
-VDEFINES=-DPACKAGE=\"seta-gx\" -DVERSION=\"r2926\" -DWIIVERSION=\"ver.\ 1.0\"  -DREENTRANT_SYSCALLS_PROVIDED
+VDEFINES=-DPACKAGE=\"satwii\" -DVERSION=\"r2926\" -DWIIVERSION=\"SATWII\ v0.1\" -DREENTRANT_SYSCALLS_PROVIDED -DSATWII
 
-MACHDEP = -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -fsigned-char -ffast-math -funroll-loops -fauto-inc-dec -finline-functions #-fomit-frame-pointer -flto
-
+MACHDEP = -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -fsigned-char -ffast-math -funroll-loops -fauto-inc-dec -finline-functions -fomit-frame-pointer -flto -mpaired
 #This is only for profiling with gperf
+
 MACHDEP += #-fomit-frame-pointer
-CFLAGS	= -g -O2 -Wall -static -falign-functions=2 $(MACHDEP) $(DDEFINES) $(VDEFINES) $(INCLUDE)
+CFLAGS = -O3 -Wall -static -falign-functions=2 $(MACHDEP) $(DDEFINES) $(VDEFINES) $(INCLUDE)
 #CFLAGS =  $(DDEFINES) -g -Ofast -mrvl -Wall $(MACHDEP) -$(INDLUDE)
 CXXFLAGS	=	$(CFLAGS)
 
