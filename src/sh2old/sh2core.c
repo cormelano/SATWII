@@ -1194,9 +1194,9 @@ void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR_reg, u32 *TCR, u32 *VCRDMA)
       switch (size = ((*CHCR & 0x0C00) >> 10)) {
          case 0:
             for (i = 0; i < *TCR; i++) {
-               mem_Write8(*DAR, mem_Read8(*SAR));
+               mem_Write8(*DAR_reg, mem_Read8(*SAR));
                *SAR += srcInc;
-               *DAR += destInc;
+               *DAR_reg += destInc;
             }
 
             *TCR = 0;
@@ -1206,9 +1206,9 @@ void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR_reg, u32 *TCR, u32 *VCRDMA)
             srcInc *= 2;
 
             for (i = 0; i < *TCR; i++) {
-               mem_Write16(*DAR, mem_Read16(*SAR));
+               mem_Write16(*DAR_reg, mem_Read16(*SAR));
                *SAR += srcInc;
-               *DAR += destInc;
+               *DAR_reg += destInc;
             }
 
             *TCR = 0;
@@ -1218,8 +1218,8 @@ void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR_reg, u32 *TCR, u32 *VCRDMA)
             srcInc *= 4;
 
             for (i = 0; i < *TCR; i++) {
-               mem_Write32(*DAR, mem_Read32(*SAR));
-               *DAR += destInc;
+               mem_Write32(*DAR_reg, mem_Read32(*SAR));
+               *DAR_reg += destInc;
                *SAR += srcInc;
             }
 
@@ -1231,8 +1231,8 @@ void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR_reg, u32 *TCR, u32 *VCRDMA)
 
             for (i = 0; i < *TCR; i+=4) {
                for(i2 = 0; i2 < 4; i2++) {
-                  mem_Write32(*DAR, mem_Read32(*SAR));
-                  *DAR += destInc;
+                  mem_Write32(*DAR_reg, mem_Read32(*SAR));
+                  *DAR_reg += destInc;
                   *SAR += srcInc;
                }
             }
@@ -1240,7 +1240,7 @@ void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR_reg, u32 *TCR, u32 *VCRDMA)
             *TCR = 0;
             break;
       }
-      SH2WriteNotify(destInc<0?*DAR:*DAR-i*destInc,i*abs(destInc));
+      SH2WriteNotify(destInc<0?*DAR_reg:*DAR_reg-i*destInc,i*abs(destInc));
    }
 
    if (*CHCR & 0x4)
